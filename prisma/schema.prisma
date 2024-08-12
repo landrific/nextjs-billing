@@ -1,0 +1,93 @@
+datasource db {
+    provider = "postgresql"
+      url      = env("POSTGRES_URL")
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+model User {
+    id             String    @id
+      name           String?
+        email          String    @unique
+          emailVerified  DateTime? @db.Date
+            image          String?
+              accounts       Account[]
+                sessions       Session[]
+                  
+}
+
+model Account {
+    userId            String   @id
+      type              String
+        provider          String
+          providerAccountId String
+            refreshToken      String?
+              accessToken       String?
+                expiresAt         Int?
+                  tokenType         String?
+                    scope             String?
+                      idToken           String?
+                        sessionState      String?
+                          user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+    sessionToken String   @id
+      userId       String
+        expires      DateTime
+          user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+    identifier String
+      token      String
+        expires    DateTime
+          @@id([identifier, token])
+}
+
+model WebhookEvent {
+    id             Int       @id @default(autoincrement())
+      createdAt      DateTime  @default(now())
+        eventName      String
+          processed      Boolean   @default(false)
+            body           Json
+              processingError String?
+}
+
+model Plan {
+    id                 Int      @id @default(autoincrement())
+      productId          Int
+        productName        String
+          variantId          Int      @unique
+            name               String
+              description        String
+                price              String
+                  isUsageBased       Boolean  @default(false)
+                    interval           String?
+                      intervalCount      Int?
+                        trialInterval      String?
+                          trialIntervalCount Int?
+                            sort               Int?
+}
+
+model Subscription {
+    id                 Int      @id @default(autoincrement())
+      lemonSqueezyId     String   @unique
+        orderId            Int
+          name               String
+            email              String
+              status             String
+                statusFormatted    String
+                  renewsAt           String?
+                    endsAt             String?
+                      trialEndsAt        String?
+                        price              String
+                          isUsageBased       Boolean  @default(false)
+                            isPaused           Boolean  @default(false)
+                              subscriptionItemId Int?
+                                userId             String
+                                  planId             Int
+    
+}

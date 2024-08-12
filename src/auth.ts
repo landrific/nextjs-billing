@@ -1,30 +1,36 @@
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import NextAuth, { type NextAuthConfig } from "next-auth";
 import GitHub from "next-auth/providers/github";
-import { db } from "./db/schema";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { PrismaClient } from "@prisma/client";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: DrizzleAdapter(db),
-  providers: [GitHub],
-  basePath: "/api/auth",
-  pages: {
-    signIn: "/",
-  },
-  callbacks: {
-    authorized: ({ request: { nextUrl }, auth: midAuth }) => {
-      const isLoggedIn = Boolean(midAuth?.user);
-      const isOnDashboard = nextUrl.pathname.startsWith("/dashboard");
+// Initialize Prisma Client
+const prisma = new PrismaClient();
 
-      if (isOnDashboard) {
-        // Redirect unauthenticated users to the login page
-        return isLoggedIn;
-      } else if (isLoggedIn) {
-        // Redirect authenticated users to the dashboard
-        return Response.redirect(new URL("/dashboard", nextUrl));
-      }
+export const authOptions: NextAuthConfig = {
+  adapter: PrismaAdapter(prisma),
+    providers: [
+        GitHub({
+              clientId: process.env.GITHUB_CLIENT_ID,
+                    clientSecret: process.env.GITHUB_CLIENT_SECRET,
+                        }),
+                          ],
+                            pages: {
+                                signIn: "/",
+                                  },
+                                    callbacks: {
+                                        async redirect({ url, baseUrl }) {
+                                              // Customize redirection logic if needed
+                                                    return url.startsWith(baseUrl) ? url : baseUrl;
+                                                        },
+                                                            async session({ session, user }) {
+                                                                  // Custom session handling if needed
+                                                                        return session;
+                                                                            },
+                                                                                async signIn({ user, account, profile }) {
+                                                                                      // Custom sign-in handling if needed
+                                                                                            return true;
+                                                                                                },
+                                                                                                  },
+                                                                                                  };
 
-      // Allow unauthenticated users to access other pages
-      return true;
-    },
-  },
-} satisfies NextAuthConfig);
+                                                                                                  export default NextAuth(authOptions);
